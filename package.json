@@ -1,0 +1,35 @@
+{
+  "name": "flyd-experiment",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node webpack-server.js",
+    "build": "NODE_ENV=production webpack -p --progress scripts/index.jsx bundle.js"
+  },
+  "devDependencies": {
+    "autoprefixer-loader": "^1.1.0",
+    "babel-core": "*",
+    "babel-loader": "*",
+    "css-loader": "^0.9.1",
+    "eslint": "^0.17.1",
+    "eslint-plugin-react": "^1.5.0",
+    "jsx-loader": "^0.12.2",
+    "normalize.css": "^3.0.2",
+    "react-hot-loader": "*",
+    "sass-loader": "^0.4.2",
+    "style-loader": "^0.8.3",
+    "webpack": "^1.5.1",
+    "webpack-dev-server": "1.6.4"
+  },
+  "dependencies": {
+    "babel": "*",
+    "flyd": "^0.1.14",
+    "flyd-forwardto": "0.0.2",
+    "ramda": "^0.17.1",
+    "ramda-fantasy": "^0.3.0",
+    "react": "*"
+  },
+  "author": "",
+  "license": "ISC"
+}
