@@ -5,21 +5,34 @@ import forwardTo from 'flyd-forwardto';
 
 import * as Counter from './Counter.jsx';
 //Model
-const initialModel = 0;
+/*
+data Model = {
+ counters : [[ID, Counter.Model]],
+ nextID: ID
+ }
+  type ID = Integer
+ */
 
 const topLens = R.lensProp('topCounter');
 const bottomLens = R.lensProp('bottomCounter');
 
 //-∆≣ type Action = Increment | Decrement
 const action = {
-  increment() {
+  reset() {
     return {
-      type: 'Increment'
+      type: 'Reset'
     }
   },
-  decrement() {
+  top(act) {
     return {
-      type: 'Decrement'
+      type: 'Top',
+      value: act
+    }
+  },
+  bottom(act) {
+    return {
+      type: 'Bottom',
+      value: act
     }
   }
 };
@@ -59,9 +72,9 @@ class CounterView extends React.Component {
     console.log('render main');
     return (
       <div>
-        <Counter.CounterView model={model.topCounter} stream={forwardTo(actions, action => {return {type: 'Top', value: action}})}/>
-        <Counter.CounterView model={model.bottomCounter} stream={forwardTo(actions, action => {return {type: 'Bottom', value: action}})}/>
-        <button onClick={actions.bind(null, {type: 'Reset'})}>Reset</button>
+        <Counter.CounterView model={model.topCounter} stream={forwardTo(actions, a => action.top(a))}/>
+        <Counter.CounterView model={model.bottomCounter} stream={forwardTo(actions, a => action.bottom(a))}/>
+        <button onClick={actions.bind(null, action.reset())}>Reset</button>
       </div>
     )
   }
