@@ -6,54 +6,71 @@ import forwardTo from 'flyd-forwardto';
 import * as Counter from './Counter.jsx';
 //Model
 /*
-data Model = {
+ data Model = {
  counters : [[ID, Counter.Model]],
  nextID: ID
  }
-  type ID = Integer
+ type ID = Integer
  */
 
-const topLens = R.lensProp('topCounter');
-const bottomLens = R.lensProp('bottomCounter');
+const modelLens = {
+  counters: R.lensProp('counters'),
+  nextID: R.lensProp('nextID'),
+  counter: {
+    ID: R.lensIndex(0),
+    CounterModel: R.lensIndex(1)
+  }
+};
+let counterID = R.view(modelLens.counter.ID);
+let counterModel = R.view(modelLens.counter.CounterModel);
 
-//-∆≣ type Action = Increment | Decrement
-const action = {
-  reset() {
+const Action = {
+  insert() {
     return {
-      type: 'Reset'
+      type: 'Insert'
     }
   },
-  top(act) {
+  remove() {
     return {
-      type: 'Top',
-      value: act
+      type: 'Remove'
     }
   },
-  bottom(act) {
+  modify(id, action) {
     return {
-      type: 'Bottom',
-      value: act
+      type: 'Modify',
+      id,
+      action
     }
   }
 };
 
-//-∆≣ init :: Integer -> Integer -> Model
-function init(vt, vb) {
+//-∆≣ init :: * -> Model
+function init() {
   return {
-    topCounter: Counter.init(vt),
-    bottomCounter: Counter.init(vb)
+    counters:[],
+    nextID: 0
   };
 }
 
 //-∆≣ update :: Model -> Action -> Model
 function update(model, action) {
   switch (action.type) {
-    case 'Reset':
-      return init(0,0);
-    case 'Top':
-      return R.set(topLens, Counter.update(model.topCounter, action.value), model);
-    case 'Bottom':
-      return R.set(bottomLens, Counter.update(model.bottomCounter, action.value), model);
+    case 'Insert':
+      let newCounter = [model.nextID, Counter.init(0)];
+      let newCounters = R.append(newCounter, model.counters);
+      return R.pipe(
+        R.set(modelLens.counters, newCounters),
+        R.set(modelLens.nextID, model.nextID + 1)
+      )(model);
+    case 'Remove':
+      return R.over(modelLens.counters, R.drop(1), model);
+    case 'Modify':
+      let updateCounter = R.ifElse(
+        R.compose(R.equals(action.id), counterID),
+        (counter) => [counterID(counter), Counter.update(counterModel(counter), action.action)],
+        R.identity
+      );
+      return R.over(modelLens.counters, R.map(updateCounter), model);
     default:
       return model;
   }
@@ -63,23 +80,26 @@ function update(model, action) {
 const actions = flyd.stream();
 
 //-∆≣ model :: FlydStream Model
-const model = flyd.scan(update, init(0,0), actions);
+const model = flyd.scan(update, init(), actions);
 
 //-∆≣ view :: Model -> React.Component
 class CounterView extends React.Component {
   render() {
     let {model} = this.props;
-    console.log('render main');
     return (
       <div>
-        <Counter.CounterView model={model.topCounter} stream={forwardTo(actions, a => action.top(a))}/>
-        <Counter.CounterView model={model.bottomCounter} stream={forwardTo(actions, a => action.bottom(a))}/>
-        <button onClick={actions.bind(null, action.reset())}>Reset</button>
+        <button onClick={actions.bind(null, Action.insert())}>Add counter</button>
+        <button onClick={actions.bind(null, Action.remove())}>Remove counter</button>
+        {model.counters.map(counter => {
+          return <Counter.CounterView model={counterModel(counter)} stream={forwardTo(actions, a => Action.modify(counterID(counter), a))}/>
+        })}
       </div>
     )
   }
 }
-//}
 
 
 flyd.on(m => React.render(<CounterView model={m} />, document.getElementById('react-root')), model);
+
+flyd.on(a => console.log('action', a), actions);
+flyd.on(m => console.log('model', m), model);
