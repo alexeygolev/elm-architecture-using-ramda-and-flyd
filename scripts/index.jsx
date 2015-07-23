@@ -30,9 +30,11 @@ const Action = {
       type: 'Insert'
     }
   },
-  remove() {
+  remove(id) {
+    console.log('remove', id);
     return {
-      type: 'Remove'
+      type: 'Remove',
+      id
     }
   },
   modify(id, action) {
@@ -63,7 +65,7 @@ function update(model, action) {
         R.set(modelLens.nextID, model.nextID + 1)
       )(model);
     case 'Remove':
-      return R.over(modelLens.counters, R.drop(1), model);
+      return R.over(modelLens.counters, R.filter(counter => counterID(counter) !== action.id), model);
     case 'Modify':
       let updateCounter = R.ifElse(
         R.compose(R.equals(action.id), counterID),
@@ -89,9 +91,13 @@ class CounterView extends React.Component {
     return (
       <div>
         <button onClick={actions.bind(null, Action.insert())}>Add counter</button>
-        <button onClick={actions.bind(null, Action.remove())}>Remove counter</button>
         {model.counters.map(counter => {
-          return <Counter.CounterView model={counterModel(counter)} stream={forwardTo(actions, a => Action.modify(counterID(counter), a))}/>
+          console.log('counter', counterID(counter));
+          return <Counter.CounterViewWithRemoveButton
+            key={counterID(counter)}
+            model={counterModel(counter)}
+            context={{actions: forwardTo(actions, a => Action.modify(counterID(counter), a)),
+            remove: forwardTo(actions, a => Action.remove(counterID(counter)))}}/>
         })}
       </div>
     )

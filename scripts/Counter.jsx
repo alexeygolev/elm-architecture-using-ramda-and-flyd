@@ -64,9 +64,25 @@ class CounterView extends React.Component {
   }
 }
 
+class CounterViewWithRemoveButton extends React.Component {
+  shouldComponentUpdate(props){
+    return this.props.model !== props.model;
+  }
+  render() {
+    let {model, context} = this.props;
+    return (
+      <div>
+        <CounterView stream={context.actions} model={model}/>
+        <button onClick={context.remove}>Remove</button>
+      </div>
+    )
+  }
+}
+
 export default {
   init,
   update,
   model,
-  CounterView
+  CounterView,
+  CounterViewWithRemoveButton
 }
