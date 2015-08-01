@@ -3,7 +3,7 @@ import R from 'ramda';
 import flyd from 'flyd';
 import forwardTo from 'flyd-forwardto';
 
-import * as Counter from './Counter.jsx';
+import * as Counter from './Counter.js';
 //Model
 /*
  data Model = {
@@ -31,7 +31,6 @@ const Action = {
     }
   },
   remove(id) {
-    console.log('remove', id);
     return {
       type: 'Remove',
       id
@@ -92,7 +91,6 @@ class CounterView extends React.Component {
       <div>
         <button onClick={actions.bind(null, Action.insert())}>Add counter</button>
         {model.counters.map(counter => {
-          console.log('counter', counterID(counter));
           return <Counter.CounterViewWithRemoveButton
             key={counterID(counter)}
             model={counterModel(counter)}
@@ -107,5 +105,5 @@ class CounterView extends React.Component {
 
 flyd.on(m => React.render(<CounterView model={m} />, document.getElementById('react-root')), model);
 
-flyd.on(a => console.log('action', a), actions);
-flyd.on(m => console.log('model', m), model);
+//flyd.on(a => console.log('action', a), actions);
+//flyd.on(m => console.log('model', m), model);

@@ -53,7 +53,6 @@ class CounterView extends React.Component {
   }
   render() {
     let {stream, model} = this.props;
-    console.log('render');
     return (
       <div>
         <p>{model}</p>
