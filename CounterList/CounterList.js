@@ -1,6 +1,8 @@
 import React from 'react';
 import R from 'ramda';
 import flyd from 'flyd';
+import {genActions} from '../ActionsGen/ActionsGen';
+
 import forwardTo from 'flyd-forwardto';
 
 import * as Counter from './Counter.js';
@@ -24,26 +26,28 @@ const modelLens = {
 let counterID = R.view(modelLens.counter.ID);
 let counterModel = R.view(modelLens.counter.CounterModel);
 
-const Action = {
-  insert() {
-    return {
-      type: 'Insert'
-    }
-  },
-  remove(id) {
-    return {
-      type: 'Remove',
-      id
-    }
-  },
-  modify(id, action) {
-    return {
-      type: 'Modify',
-      id,
-      action
-    }
-  }
-};
+//const Action = {
+//  insert() {
+//    return {
+//      type: 'Insert'
+//    }
+//  },
+//  remove(id) {
+//    return {
+//      type: 'Remove',
+//      id
+//    }
+//  },
+//  modify(id, action) {
+//    return {
+//      type: 'Modify',
+//      id,
+//      action
+//    }
+//  }
+//};
+
+const Action = genActions([['Insert'], ['Remove', 'id'], ['Modify', 'id', 'action']]);
 
 //-∆≣ init :: * -> Model
 function init() {
@@ -89,13 +93,13 @@ class CounterView extends React.Component {
     let {model} = this.props;
     return (
       <div>
-        <button onClick={actions.bind(null, Action.insert())}>Add counter</button>
+        <button onClick={actions.bind(null, Action.Insert())}>Add counter</button>
         {model.counters.map(counter => {
           return <Counter.CounterViewWithRemoveButton
             key={counterID(counter)}
             model={counterModel(counter)}
-            context={{actions: forwardTo(actions, a => Action.modify(counterID(counter), a)),
-            remove: forwardTo(actions, a => Action.remove(counterID(counter)))}}/>
+            context={{actions: forwardTo(actions, a => Action.Modify(counterID(counter), a)),
+            remove: forwardTo(actions, a => Action.Remove(counterID(counter)))}}/>
         })}
       </div>
     )

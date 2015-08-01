@@ -1,24 +1,28 @@
 import React from 'react';
 import R from 'ramda';
 import flyd from 'flyd';
-//Model
+import {genActions} from '../ActionsGen/ActionsGen';
 
+//Model
 const initialModel = 0;
 
 
 //-∆≣ type Action = Increment | Decrement
-const action = {
-  increment() {
-    return {
-      type: 'Increment'
-    }
-  },
-  decrement() {
-    return {
-      type: 'Decrement'
-    }
-  }
-};
+//const action = {
+//  increment() {
+//    return {
+//      type: 'Increment'
+//    }
+//  },
+//  decrement() {
+//    return {
+//      type: 'Decrement'
+//    }
+//  }
+//};
+
+//-∆≣ type Action = Increment | Decrement
+const Action = genActions([['Increment'], ['Decrement']]);
 
 //-∆≣ update :: Model -> Action -> Model
 function update(model, action) {

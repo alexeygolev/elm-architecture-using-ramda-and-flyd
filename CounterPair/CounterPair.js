@@ -2,6 +2,7 @@ import React from 'react';
 import R from 'ramda';
 import flyd from 'flyd';
 import forwardTo from 'flyd-forwardto';
+import {genActions} from '../ActionsGen/ActionsGen';
 
 import * as Counter from './Counter.js';
 //Model
@@ -16,26 +17,28 @@ import * as Counter from './Counter.js';
 const topLens = R.lensProp('topCounter');
 const bottomLens = R.lensProp('bottomCounter');
 
-//-∆≣ type Action = Increment | Decrement
-const action = {
-  reset() {
-    return {
-      type: 'Reset'
-    }
-  },
-  top(act) {
-    return {
-      type: 'Top',
-      value: act
-    }
-  },
-  bottom(act) {
-    return {
-      type: 'Bottom',
-      value: act
-    }
-  }
-};
+//const action = {
+//  reset() {
+//    return {
+//      type: 'Reset'
+//    }
+//  },
+//  top(act) {
+//    return {
+//      type: 'Top',
+//      value: act
+//    }
+//  },
+//  bottom(act) {
+//    return {
+//      type: 'Bottom',
+//      value: act
+//    }
+//  }
+//};
+
+//-∆≣ type Action = Reset | Top | Bottom
+const Action = genActions([['Reset'], ['Top', 'value'], ['Bottom', 'value']]);
 
 //-∆≣ init :: Integer -> Integer -> Model
 function init(vt, vb) {
@@ -71,9 +74,9 @@ class CounterView extends React.Component {
     let {model} = this.props;
     return (
       <div>
-        <Counter.CounterView model={model.topCounter} stream={forwardTo(actions, a => action.top(a))}/>
-        <Counter.CounterView model={model.bottomCounter} stream={forwardTo(actions, a => action.bottom(a))}/>
-        <button onClick={actions.bind(null, action.reset())}>Reset</button>
+        <Counter.CounterView model={model.topCounter} stream={forwardTo(actions, a => Action.Top(a))}/>
+        <Counter.CounterView model={model.bottomCounter} stream={forwardTo(actions, a => Action.Bottom(a))}/>
+        <button onClick={actions.bind(null, Action.Reset())}>Reset</button>
       </div>
     )
   }
