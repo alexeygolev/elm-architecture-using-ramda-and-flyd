@@ -6,20 +6,16 @@ import adt from 'adt';
 
 const initialModel = 0;
 
-let createTs = R.reduce((acc,cur) => {acc[cur] = cur; return acc},{});
-let t = createTs(['Increment', 'Decrement']);
-
-console.log('t', t);
 //-∆≣ type Action = Increment | Decrement
 const Action = {
   Increment() {
     return {
-      type: t.Increment
+      type: 'Increment'
     }
   },
   Decrement() {
     return {
-      type: t.Decrement
+      type: 'Decrement'
     }
   }
 };
@@ -27,14 +23,15 @@ const Action = {
 //-∆≣ update :: Model -> Action -> Model
 function update(model, action) {
   switch (action.type) {
-    case t.Increment:
+    case 'Increment':
       return model + 1;
-    case t.Decrement:
+    case 'Decrement':
       return model - 1;
     default:
       return model;
   }
 }
+
 
 //-∆≣ init :: Integer -> Model
 function init(v) {
