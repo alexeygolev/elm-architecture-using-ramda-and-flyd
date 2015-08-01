@@ -23,6 +23,7 @@
     "webpack-dev-server": "1.6.4"
   },
   "dependencies": {
+    "adt": "^0.7.2",
     "babel": "*",
     "flyd": "^0.1.14",
     "flyd-forwardto": "0.0.2",
