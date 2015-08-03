@@ -11,7 +11,6 @@ import * as TodoItem from './TodoItem';
 import {onEnter, targetValue} from './Utils';
 import forwardTo from 'flyd-forwardto';
 
-const history = createHistory();
 /*
  data Model = Model {
  tasks :: [Task],
@@ -168,7 +167,7 @@ class Link extends React.Component {
 //-∆≣ visibilitySwap :: Address Action -> String -> String -> String -> React.Component
 function visibilitySwap(address, uri, visibility, actualVisibility) {
   return (
-    <li onClick={address.bind(null, Action.ChangeVisibility(visibility))}>
+    <li>
       <Link href={uri} className={classNames({selected: visibility === actualVisibility})}>{visibility}</Link>
     </li>
   )
@@ -269,6 +268,19 @@ flyd.map(model => saveModel('state', model), model$);
 flyd.on(m => React.render(<TodoMVC model={m} address={actions$}/>, document.getElementById('react-root')), model$);
 
 
+const history = createHistory();
+const unlisten = history.listen(forwardTo(actions$, a => {
+  switch(a.pathname){
+    case '/all':
+      return Action.ChangeVisibility('All');
+    case '/completed':
+      return Action.ChangeVisibility('Completed');
+    case '/active':
+      return Action.ChangeVisibility('Active');
+    default:
+      return Action.ChangeVisibility('All');
+  }
+}));
 
 //flyd.on(a => console.log('action', a), actions$);
 //flyd.on(m => console.log('model', m), model$);
