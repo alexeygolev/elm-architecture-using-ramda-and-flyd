@@ -11,9 +11,11 @@ let Result = genActions([
   ['Ok', 'data'],
   ['Err', 'error']
 ]);
+let parse = R.compose(JSON.parse, R.prop('text'));
 
+let cF = R.curry((r, url) => r(url).createFuture());
 
-
+let bimap = R.invoker(2, 'bimap');
 
 //-∆≣ view :: String -> Future String [String] -> React.Component
 class ZipCodes extends React.Component {
@@ -53,14 +55,14 @@ const request$ = flyd.map(
 flyd.on(() => React.render(<ZipCodes query={query$} result={result$()}/>, document.getElementById('react-root')), merge$);
 
 function lookupZipCode(query) {
-  if(query.match(/[A-Za-z]{1,2}[0-9][A-Za-z0-9]?\s?[0-9][ABD-HJLNP-UW-Zabd-hjlnp-uw-z]{2}/)){
-    return request.get(`http://uk-postcodes.com/postcode/${query}.json`)
-      .createFuture()
-      .map(R.prop('text'))
-      .map(JSON.parse);
-  } else {
-    return Future.reject('Give me a valid UK post code!')
-  }
+  let toUrl = new Future((reject, resolve) => {
+    if(query.match(/[A-Za-z]{1,2}[0-9][A-Za-z0-9]?\s?[0-9][ABD-HJLNP-UW-Zabd-hjlnp-uw-z]{2}/)){
+      resolve(`http://uk-postcodes.com/postcode/${query}.json`);
+    } else {
+      reject('Give me a valid UK post code!');
+    }
+  });
+    return toUrl.chain(R.compose(bimap(R.always('Not found:('), R.identity), R.map(parse), cF(request.get)));
 }
 
 
