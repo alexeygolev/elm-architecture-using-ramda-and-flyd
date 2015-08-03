@@ -2,12 +2,16 @@ require('../node_modules/todomvc-app-css/index.css');
 require ('../node_modules/todomvc-common/base.css');
 import React from 'react';
 import R from 'ramda';
+import {createHistory} from 'history';
 import classNames from 'classnames';
 import {Either, IO, Maybe} from 'ramda-fantasy';
 import flyd from 'flyd';
 import {genActions} from '../ActionsGen/ActionsGen';
+import * as TodoItem from './TodoItem';
+import {onEnter, targetValue} from './Utils';
+import forwardTo from 'flyd-forwardto';
 
-
+const history = createHistory();
 /*
  data Model = Model {
  tasks :: [Task],
@@ -25,10 +29,6 @@ import {genActions} from '../ActionsGen/ActionsGen';
  id :: Int
  }
  */
-
-function targetValue(e){
-  return e.target.value
-}
 
 //----∆≣ newTask :: String -> Int -> Task
 function newTask(description, id) {
@@ -50,12 +50,10 @@ const emptyModel = {
 let Action = genActions([
   ['NoOp'],
   ['UpdateField', 'str'],
-  ['EditingTask', 'id', 'isEditing'],
-  ['UpdateTask', 'id', 'task'],
   ['Add'],
+  ['Modify', 'id', 'action'],
   ['Delete', 'id'],
   ['DeleteComplete'],
-  ['Check', 'id', 'isCompleted'],
   ['CheckAll', 'isCompleted'],
   ['ChangeVisibility', 'visibility']
 ]);
@@ -63,7 +61,7 @@ let Action = genActions([
 
 
 //----∆≣ update :: Model -> Action -> Model
-function update(model, action) {
+function update(action, model) {
   function updateTaskWithId(key, value){
     return R.ifElse(R.propEq('id', action.id), R.assoc(key, value), R.identity);
   }
@@ -80,28 +78,14 @@ function update(model, action) {
           ? R.identity
           : R.append(newTask(model.field, model.uid))
       }, model);
-    case 'EditingTask':
-      return R.converge(
-        R.assoc('tasks'),
-        R.compose(R.map(updateTaskWithId('editing', action.isEditing)), R.prop('tasks')),
-        R.identity
-      )(model);
-    case 'UpdateTask':
-      return R.converge(
-        R.assoc('tasks'),
-        R.compose(R.map(updateTaskWithId('description', action.task)), R.prop('tasks')),
-        R.identity
-      )(model);
+    case 'Modify':
+      let idx = R.findIndex(R.propEq('id', action.id), model.tasks);
+      return R.evolve({tasks: R.adjust(TodoItem.update(action.action), idx)}, model);
     case 'Delete':
+      console.log('delete');
       return R.converge(R.assoc('tasks'), R.compose(R.reject(R.propEq('id', action.id)), R.prop('tasks')), R.identity)(model);
     case 'DeleteComplete':
       return R.converge(R.assoc('tasks'), R.compose(R.reject(R.prop('completed')), R.prop('tasks')), R.identity)(model);
-    case 'Check':
-      return R.converge(
-        R.assoc('tasks'),
-        R.compose(R.map(updateTaskWithId('completed', action.isCompleted)), R.prop('tasks')),
-        R.identity
-      )(model);
     case 'CheckAll':
       let updateTask = R.assoc('completed', action.isCompleted);
       return R.converge(R.assoc('tasks'), R.compose(R.map(updateTask), R.prop('tasks')), R.identity)(model);
@@ -109,70 +93,6 @@ function update(model, action) {
       return R.assoc('visibility', action.visibility)(model);
     default:
       return model;
-  }
-}
-
-//----∆≣ is13 :: Int -> Either String ()
-function is13(code) {
-  return code === 13
-    ? Either.Right()
-    : Either.Left('Not the right key code')
-}
-
-//----∆≣ onEnter :: Address a -> a -> Prop
-function onEnter(address, value){
-  return {
-    onKeyDown(e){
-      R.map(() => address(value), is13(e.keyCode))
-    }
-  }
-}
-
-//----∆≣ findDOMNode :: Ref -> IO DOMNode
-function findDOMNode(ref) {
-  return IO.of(React.findDOMNode(ref))
-}
-
-//----∆≣ todoItem :: Address Action -> Task -> React.Component
-class TodoItem extends React.Component {
-  componentDidUpdate(oldProps){
-    if(oldProps.todo.editing === false && this.props.todo.editing) {
-      findDOMNode(this.refs.update)
-        .map(R.tap(R.invoker(0, 'focus')))
-        .map(R.tap(node => node.setSelectionRange(node.value.length, node.value.length)))
-        .runIO();
-    }
-  }
-  render(){
-    let {address, todo} = this.props;
-    return (
-      <li key={todo.id} className={classNames({completed: todo.completed},{editing: todo.editing})}>
-        <div className="view">
-          <input
-            type="checkbox"
-            className="toggle"
-            checked={todo.completed}
-            onChange={address.bind(null, Action.Check(todo.id, !todo.completed))}
-          />
-          <label
-            onDoubleClick={address.bind(null, Action.EditingTask(todo.id, true))}
-          >{todo.description}
-          </label>
-          <button className="destroy"
-                  onClick={address.bind(null, Action.Delete(todo.id))}>
-          </button>
-        </div>
-        <input
-          ref="update"
-          className="edit"
-          value={todo.description}
-          name="title"
-          id={'todo-' + todo.id}
-          onBlur={address.bind(null, Action.EditingTask(todo.id, false))}
-          onChange={R.compose(address, Action.UpdateTask(todo.id), targetValue)}
-          {...onEnter(address, Action.EditingTask(todo.id, false))}/>
-      </li>
-    )
   }
 }
 
@@ -204,7 +124,10 @@ function taskList(address, visibility, tasks){
         checked={allCompleted}
         onChange={address.bind(null, Action.CheckAll(!allCompleted))}/>
       <ul className="todo-list">
-        {R.map(todo => <TodoItem key={todo.id} address={address} todo={todo}/>, R.filter(isVisible, tasks))}
+        {R.map(todo => <TodoItem.TodoItem key={todo.id} todo={todo} context={{
+          actions$: forwardTo(actions$, a => Action.Modify(todo.id, a)),
+          remove$: forwardTo(actions$, R.always(Action.Delete(todo.id)))
+        }}/>, R.filter(isVisible, tasks))}
       </ul>
     </section>
   )
@@ -228,11 +151,25 @@ function taskEntry(address, task) {
   )
 }
 
+class Link extends React.Component {
+  catchClick(e){
+    e.preventDefault();
+    history.pushState({}, this.props.href)
+  }
+  render(){
+    let {href, className} = this.props;
+    return (
+      <a href={href} className={className} onClick={this.catchClick.bind(this)}>{this.props.children}</a>
+    )
+  }
+}
+
+
 //-∆≣ visibilitySwap :: Address Action -> String -> String -> String -> React.Component
 function visibilitySwap(address, uri, visibility, actualVisibility) {
   return (
     <li onClick={address.bind(null, Action.ChangeVisibility(visibility))}>
-      <a href={uri} className={classNames({selected: visibility === actualVisibility})}>{visibility}</a>
+      <Link href={uri} className={classNames({selected: visibility === actualVisibility})}>{visibility}</Link>
     </li>
   )
 }
@@ -252,12 +189,12 @@ function controls(address, visibility, tasks) {
   return (
     <footer className="footer">
       <span className="todo-count"><strong>{tasksLeft} </strong>{item_} left</span>
-        <ul className="filters">
-          {visibilitySwap(address, '#/', 'All', visibility)}
-          {visibilitySwap(address, '#/active', 'Active', visibility)}
-          {visibilitySwap(address, '#/completed', 'Completed', visibility)}
-        </ul>
-        <button className="clear-completed" onClick={address.bind(null, Action.DeleteComplete())}>Clear completed ({tasksCompleted})</button>
+      <ul className="filters">
+        {visibilitySwap(address, '/', 'All', visibility)}
+        {visibilitySwap(address, '/active', 'Active', visibility)}
+        {visibilitySwap(address, '/completed', 'Completed', visibility)}
+      </ul>
+      <button className="clear-completed" onClick={address.bind(null, Action.DeleteComplete())}>Clear completed ({tasksCompleted})</button>
     </footer>
 
   )
@@ -265,6 +202,9 @@ function controls(address, visibility, tasks) {
 
 //-∆≣ view :: Address Action -> Model -> React.Component
 class TodoMVC extends React.Component {
+  shouldComponentUpdate(props){
+    return this.props.model !== props.model;
+  }
   render() {
     return (
       <div>
@@ -280,15 +220,55 @@ class TodoMVC extends React.Component {
   }
 }
 
+//-∆≣ setLocal :: String -> Maybe String -> IO ()
+let setLocal = R.curry((key, mState) => IO.of(R.map(state => localStorage.setItem(key, state), mState)));
+
+//-∆≣ getLocal :: String -> IO String
+let getLocal = key => IO.of(localStorage.getItem(key));
+
+//-∆≣ stringify :: Object -> Maybe String
+let stringify = model => {
+  var _str;
+  try{
+    _str = Maybe.Just(JSON.stringify(model));
+  } catch(e) {
+    _str = Maybe.Nothing();
+  }
+  return _str;
+};
+
+//-∆≣ parse :: Object -> Maybe String
+let parse = state => {
+  var _str;
+  try{
+    _str = Maybe.Just(JSON.parse(state));
+  } catch(e) {
+    _str = Maybe.Nothing();
+  }
+  return _str;
+};
+
+//-∆≣ savedModel :: String -> IO Maybe Object
+const getSavedModel = R.compose(R.map(parse), getLocal);
+
+//-∆≣ saveModel :: String -> Object -> IO ()
+const saveModel = R.uncurryN(2, (key) => R.compose(setLocal(key), stringify));
+
+const initialModel = getSavedModel('state').runIO().getOrElse(emptyModel);
+
+
+
 //-∆≣ actions :: FlydStream Action
 const actions$ = flyd.stream();
 
 //-∆≣ model :: FlydStream Model
-const model$ = flyd.scan(update, emptyModel, actions$);
+const model$ = flyd.scan(R.flip(update), initialModel, actions$);
 
+flyd.map(model => saveModel('state', model), model$);
 
 flyd.on(m => React.render(<TodoMVC model={m} address={actions$}/>, document.getElementById('react-root')), model$);
 
 
-flyd.on(a => console.log('action', a), actions$);
-flyd.on(m => console.log('model', m), model$);
+
+//flyd.on(a => console.log('action', a), actions$);
+//flyd.on(m => console.log('model', m), model$);
