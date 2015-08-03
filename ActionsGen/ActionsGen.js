@@ -7,12 +7,12 @@ function simpleA(x) {
 
 //----∆≣ withParamsA :: [String] -> (* -> Object)
 function withParamsA(x) {
-  return function (...args) {
+  return R.curryN(x.length - 1, function (...args) {
     return {
       type: x[0],
       ...R.zipObj(R.drop(1, x), args)
     }
-  }
+  })
 }
 
 //-∆≣ createAction :: [String] -> (* -> Object)
